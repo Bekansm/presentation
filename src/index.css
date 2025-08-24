@@ -1,0 +1,44 @@
+@import "tailwindcss";
+
+/* App background base */
+html, body, #root {
+  height: 100%;
+}
+body {
+  margin: 0;
+}
+
+/* Print tweaks for PDF export (F10 -> window.print) */
+@media print {
+  html, body, #root {
+    height: auto;
+  }
+  body {
+    background: #fff !important;
+  }
+  /* Remove background overlays when printing */
+  .bg-gray-800, .bg-gray-900\/50 {
+    background: transparent !important;
+  }
+  /* Expand slide to full page */
+  .slide-animate {
+    animation: none !important;
+  }
+}
+
+/* Disable text selection and any cursor changes (no I‑beam, no hand pointer) */
+* {
+  -webkit-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  cursor: default;
+}
+a, button, [role="button"] {
+  cursor: default !important;
+}
+:focus {
+  outline: none !important;
+}
+input, textarea, [contenteditable="true"] {
+  caret-color: transparent !important;
+}
