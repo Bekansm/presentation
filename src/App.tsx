@@ -2,8 +2,8 @@ import { useState, useMemo, useEffect, useCallback, type ReactElement } from 're
 import { createRoot } from 'react-dom/client';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceArea, BarChart, Bar, Cell } from 'recharts';
-import { Droplet, Zap, Flame, CheckCircle, TrendingUp, Mail, Phone, MapPin, Lightbulb, UserPlus, Scale, Briefcase, BarChart3, FileCheck, Shield, Landmark, Users, Building2, Megaphone, FlaskConical, Link2, Trophy } from 'lucide-react';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceArea } from 'recharts';
+import { Droplet, Zap, Flame, CheckCircle, TrendingUp, Mail, Phone, MapPin, Lightbulb, UserPlus, Scale, Briefcase, BarChart3, FileCheck, Shield, Landmark, Users, Building2, Megaphone, FlaskConical, Link2, Trophy, Globe, TrendingDown, Target, Wrench, DollarSign, Leaf, Smartphone, Heart, Send, MessageSquare } from 'lucide-react';
 
 // --- Новые данные для кросс-анализа (Слайд 5) ---
 const multiResourceData = [
@@ -33,31 +33,52 @@ const multiResourceData = [
   { name: '23:00', electricity: 0.5, water: 10, gas: 0.05 },
 ];
 
-// Помесячные данные для обычных счётчиков (электричество)
+// (не используется) почасовые данные для примера электричества — удалены
+
+// Помесячные данные по электричеству: "Схожие потребители" и "Вы" (кВт⋅ч)
+// peers — усреднённое потребление схожих домохозяйств (зима выше, лето ниже)
+// you — тот же профиль, но с аномалиями в Июле (AC) и Декабре (отопление/гирлянды)
 const monthlyElectricityData = [
-  { month: 'Янв', kwh: 360 },
-  { month: 'Фев', kwh: 300 },
-  { month: 'Мар', kwh: 260 },
-  { month: 'Апр', kwh: 240 },
-  { month: 'Май', kwh: 220 },
-  { month: 'Июн', kwh: 210 },
-  { month: 'Июл', kwh: 240 },
-  { month: 'Авг', kwh: 250 },
-  { month: 'Сен', kwh: 230 },
-  { month: 'Окт', kwh: 260 },
-  { month: 'Ноя', kwh: 320 },
-  { month: 'Дек', kwh: 380 },
+  { month: 'Янв', peers: 340, you: 360 },
+  { month: 'Фев', peers: 300, you: 305 },
+  { month: 'Мар', peers: 270, you: 260 },
+  { month: 'Апр', peers: 250, you: 245 },
+  { month: 'Май', peers: 230, you: 235 },
+  { month: 'Июн', peers: 220, you: 225 },
+  { month: 'Июл', peers: 230, you: 280 }, // аномалия: кондиционер/обогреватель
+  { month: 'Авг', peers: 240, you: 255 },
+  { month: 'Сен', peers: 250, you: 255 },
+  { month: 'Окт', peers: 280, you: 295 },
+  { month: 'Ноя', peers: 310, you: 330 },
+  { month: 'Дек', peers: 350, you: 400 }, // аномалия: отопление/гирлянды/доп. нагрузка
 ];
 
-// Недельные данные по воде (литры/день)
-const waterWeeklyData = [
-  { day: 'Пн', liters: 380 },
-  { day: 'Вт', liters: 390 },
-  { day: 'Ср', liters: 410 },
-  { day: 'Чт', liters: 650 }, // душ/моющие работы
-  { day: 'Пт', liters: 420 },
-  { day: 'Сб', liters: 780 }, // уборка/души семьи (пик)
-  { day: 'Вс', liters: 430 },
+// Почасовое потребление воды (литры/час): схожие потребители и вы
+const waterHourlyData = [
+  { hour: '00:00', peers: 6,  you: 8 },
+  { hour: '01:00', peers: 5,  you: 8 },
+  { hour: '02:00', peers: 5,  you: 10 }, // аномально выше — возможная утечка
+  { hour: '03:00', peers: 5,  you: 10 }, // аномально выше — возможная утечка
+  { hour: '04:00', peers: 5,  you: 8 },
+  { hour: '05:00', peers: 8,  you: 10 },
+  { hour: '06:00', peers: 20, you: 30 },
+  { hour: '07:00', peers: 80, you: 120 }, // утренний душ — пик
+  { hour: '08:00', peers: 40, you: 60 },
+  { hour: '09:00', peers: 15, you: 18 },
+  { hour: '10:00', peers: 12, you: 14 },
+  { hour: '11:00', peers: 10, you: 12 },
+  { hour: '12:00', peers: 20, you: 24 },
+  { hour: '13:00', peers: 18, you: 20 },
+  { hour: '14:00', peers: 15, you: 16 },
+  { hour: '15:00', peers: 15, you: 16 },
+  { hour: '16:00', peers: 18, you: 20 },
+  { hour: '17:00', peers: 20, you: 22 },
+  { hour: '18:00', peers: 40, you: 50 },
+  { hour: '19:00', peers: 70, you: 90 }, // вечерние дела — пик
+  { hour: '20:00', peers: 60, you: 85 },
+  { hour: '21:00', peers: 30, you: 35 },
+  { hour: '22:00', peers: 20, you: 22 },
+  { hour: '23:00', peers: 10, you: 12 },
 ];
 
 // Доп. данные
@@ -101,7 +122,7 @@ const Slide1_Title = () => (
     </div>
     <h1 className="text-6xl md:text-8xl font-bold text-cyan-300 tracking-wider">ESEP AI</h1>
     <p className="mt-4 text-xl md:text-2xl max-w-3xl">
-      Национальная цифровая платформа для повышения энергоэффективности и осознанного потребления.
+      Цифровая платформа для повышения энергоэффективности и осознанного потребления.
     </p>
     <p className="mt-8 text-lg md:text-xl bg-white/20 px-6 py-2 rounded-full">
       Готовый инструмент для достижения стратегических целей Казахстана.
@@ -145,38 +166,101 @@ const Slide2_StatePriorities = () => (
 );
 
 const Slide3_Comparison_Qualitative = () => (
-  <div className="p-8 md:p-12 text-white h-full flex flex-col">
-    <h2 className="text-3xl md:text-4xl font-bold text-cyan-300 mb-8 text-center">Сравнительный анализ моделей потребления</h2>
-    <div className="grid md:grid-cols-3 gap-6 flex-grow">
-      <div className="bg-white/10 p-6 rounded-lg border-l-4 border-cyan-400">
-        <h3 className="text-2xl font-semibold mb-3 flex items-center"><Landmark className="mr-2 text-cyan-300" />Казахстан</h3>
-        <ul className="space-y-2 text-gray-300">
-          <li className="flex items-center gap-2"><Flame className="text-orange-400 h-4 w-4" />Высокая энергоёмкость.</li>
-          <li className="flex items-center gap-2"><Zap className="text-yellow-300 h-4 w-4" />Низкие стимулы к экономии.</li>
-          <li className="flex items-center gap-2"><Building2 className="text-cyan-300 h-4 w-4" />Слабые регуляции/инерция.</li>
-          <li className="flex items-center gap-2"><Lightbulb className="text-yellow-300 h-4 w-4" />Потенциал быстрых улучшений.</li>
-        </ul>
-      </div>
-      <div className="bg-white/10 p-6 rounded-lg border-l-4 border-emerald-400">
-        <h3 className="text-2xl font-semibold mb-3 flex items-center"><Scale className="mr-2 text-emerald-300" />Европа</h3>
-        <ul className="space-y-2 text-gray-300">
-          <li className="flex items-center gap-2"><CheckCircle className="text-emerald-300 h-4 w-4" />Сильная политика и нормы.</li>
-          <li className="flex items-center gap-2"><Users className="text-cyan-300 h-4 w-4" />Высокое экосознание.</li>
-          <li className="flex items-center gap-2"><TrendingUp className="text-cyan-300 h-4 w-4" />Стабильная эффективность.</li>
-          <li className="flex items-center gap-2"><Lightbulb className="text-yellow-300 h-4 w-4" />Фокус на устойчивость.</li>
-        </ul>
-      </div>
-      <div className="bg-white/10 p-6 rounded-lg border-l-4 border-orange-400">
-        <h3 className="text-2xl font-semibold mb-3 flex items-center"><FlaskConical className="mr-2 text-orange-300" />США</h3>
-        <ul className="space-y-2 text-gray-300">
-          <li className="flex items-center gap-2"><TrendingUp className="text-cyan-300 h-4 w-4" />Инновации компенсируют спрос.</li>
-          <li className="flex items-center gap-2"><Link2 className="text-orange-300 h-4 w-4" />Быстрые внедрения smart‑технологий.</li>
-          <li className="flex items-center gap-2"><Building2 className="text-cyan-300 h-4 w-4" />Рыночные драйверы.</li>
-          <li className="flex items-center gap-2"><Lightbulb className="text-yellow-300 h-4 w-4" />Рост осознанного потребления.</li>
-        </ul>
-      </div>
+    <div className="p-8 md:p-12 text-white h-full flex flex-col justify-center">
+        <h2 className="text-3xl md:text-5xl font-bold text-cyan-300 mb-12 text-center">Три модели потребления: менталитет и механизмы</h2>
+        <div className="grid md:grid-cols-3 gap-8 flex-grow max-w-7xl mx-auto w-full">
+            <div className="bg-white/10 p-8 rounded-lg border-l-4 border-cyan-400">
+                <h3 className="text-2xl md:text-3xl font-semibold mb-4 flex items-center"><Globe className="mr-3" />Казахстан</h3>
+                <p className="text-lg md:text-xl font-bold mb-3">Наследие изобилия</p>
+                <div className="space-y-4">
+                    <div className="bg-white/5 p-4 rounded-lg border border-cyan-400/30">
+                        <div className="flex items-center gap-3 mb-2">
+                            <TrendingDown className="text-red-400 h-5 w-5" />
+                            <span className="font-semibold text-cyan-200">Низкие цены устраняют стимулы к экономии</span>
+                        </div>
+                    </div>
+                    <div className="bg-white/5 p-4 rounded-lg border border-cyan-400/30">
+                        <div className="flex items-center gap-3 mb-2">
+                            <BarChart3 className="text-orange-400 h-5 w-5" />
+                            <span className="font-semibold text-cyan-200">Высокое потребление при низкой эффективности</span>
+                        </div>
+                    </div>
+                    <div className="bg-white/5 p-4 rounded-lg border border-cyan-400/30">
+                        <div className="flex items-center gap-3 mb-2">
+                            <Target className="text-yellow-400 h-5 w-5" />
+                            <span className="font-semibold text-cyan-200">Драйвер - экономическая необходимость, а не экология</span>
+                        </div>
+                    </div>
+                    <div className="bg-white/5 p-4 rounded-lg border border-cyan-400/30">
+                        <div className="flex items-center gap-3 mb-2">
+                            <Wrench className="text-gray-400 h-5 w-5" />
+                            <span className="font-semibold text-cyan-200">Устаревшая инфраструктура</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div className="bg-white/10 p-8 rounded-lg border-l-4 border-emerald-400">
+                <h3 className="text-2xl md:text-3xl font-semibold mb-4 flex items-center"><Scale className="mr-3" />Европа</h3>
+                <p className="text-lg md:text-xl font-bold mb-3">Культура эффективности</p>
+                <div className="space-y-4">
+                    <div className="bg-white/5 p-4 rounded-lg border border-emerald-400/30">
+                        <div className="flex items-center gap-3 mb-2">
+                            <DollarSign className="text-green-400 h-5 w-5" />
+                            <span className="font-semibold text-emerald-200">Высокие цены как постоянный стимул</span>
+                        </div>
+                    </div>
+                    <div className="bg-white/5 p-4 rounded-lg border border-emerald-400/30">
+                        <div className="flex items-center gap-3 mb-2">
+                            <Shield className="text-blue-400 h-5 w-5" />
+                            <span className="font-semibold text-emerald-200">Сильная государственная политика и регулирование</span>
+                        </div>
+                    </div>
+                    <div className="bg-white/5 p-4 rounded-lg border border-emerald-400/30">
+                        <div className="flex items-center gap-3 mb-2">
+                            <Leaf className="text-green-400 h-5 w-5" />
+                            <span className="font-semibold text-emerald-200">Глубокое экологическое сознание</span>
+                        </div>
+                    </div>
+                    <div className="bg-white/5 p-4 rounded-lg border border-emerald-400/30">
+                        <div className="flex items-center gap-3 mb-2">
+                            <Target className="text-emerald-400 h-5 w-5" />
+                            <span className="font-semibold text-emerald-200">Фокус на устойчивости и энергонезависимости</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div className="bg-white/10 p-8 rounded-lg border-l-4 border-orange-400">
+                <h3 className="text-2xl md:text-3xl font-semibold mb-4 flex items-center"><Zap className="mr-3" />США</h3>
+                <p className="text-lg md:text-xl font-bold mb-3">Технологический подход</p>
+                <div className="space-y-4">
+                    <div className="bg-white/5 p-4 rounded-lg border border-orange-400/30">
+                        <div className="flex items-center gap-3 mb-2">
+                            <TrendingUp className="text-blue-400 h-5 w-5" />
+                            <span className="font-semibold text-orange-200">Высокое потребление, компенсируемое инновациями</span>
+                        </div>
+                    </div>
+                    <div className="bg-white/5 p-4 rounded-lg border border-orange-400/30">
+                        <div className="flex items-center gap-3 mb-2">
+                            <Smartphone className="text-purple-400 h-5 w-5" />
+                            <span className="font-semibold text-orange-200">Быстрое внедрение "умных" технологий</span>
+                        </div>
+                    </div>
+                    <div className="bg-white/5 p-4 rounded-lg border border-orange-400/30">
+                        <div className="flex items-center gap-3 mb-2">
+                            <BarChart3 className="text-green-400 h-5 w-5" />
+                            <span className="font-semibold text-orange-200">Рыночные силы и спрос как драйверы</span>
+                        </div>
+                    </div>
+                    <div className="bg-white/5 p-4 rounded-lg border border-orange-400/30">
+                        <div className="flex items-center gap-3 mb-2">
+                            <Heart className="text-red-400 h-5 w-5" />
+                            <span className="font-semibold text-orange-200">Растущее "осознанное потребление"</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
-  </div>
 );
 
 const Slide4_HowItHelps = () => (
@@ -230,7 +314,7 @@ const Slide4_HowItHelps = () => (
   </div>
 );
 
-const Slide5_LiveDemo_CrossAnalysis = () => {
+const Slide7_LiveDemo_CrossAnalysis = () => {
   const [showInsight, setShowInsight] = useState(false);
   const [visibility, setVisibility] = useState({
     electricity: true,
@@ -334,7 +418,7 @@ const Slide5_LiveDemo_CrossAnalysis = () => {
 
 // Устаревший слайд, заменён обновлённой версией
 
-const Slide7_PartnershipModel = () => (
+const Slide12_PartnershipModel = () => (
   <div className="p-8 md:p-12 text-white">
     <h2 className="text-3xl md:text-4xl font-bold text-cyan-300 mb-8">Модель Сотрудничества</h2>
     <p className="text-lg mb-8 text-center">
@@ -364,7 +448,7 @@ const Slide7_PartnershipModel = () => (
 
 // Устаревший слайд просьбы заменён новой версией
 
-const Slide10_Roadmap = () => (
+const Slide15_Roadmap = () => (
   <div className="p-8 md:p-12 text-white">
     <h2 className="text-3xl md:text-4xl font-bold text-cyan-300 mb-8 text-center">Дорожная Карта Партнерства</h2>
     <div className="relative border-l-2 border-cyan-400 ml-4">
@@ -387,20 +471,20 @@ const Slide10_Roadmap = () => (
   </div>
 );
 
-const Slide11_Contacts = () => (
+const Slide16_Contacts = () => (
   <div className="flex flex-col items-center justify-center h-full text-center text-white p-8">
     <h1 className="text-5xl md:text-7xl font-bold text-cyan-300 tracking-wider">ESEP</h1>
     <p className="mt-4 text-xl md:text-2xl max-w-3xl">Давайте вместе построим цифровой и энергоэффективный Казахстан.</p>
     <div className="mt-12 bg-white/10 p-8 rounded-lg text-left space-y-4">
-      <h3 className="text-2xl font-bold text-center">[Имя Фамилия], CEO</h3>
+      <h3 className="text-2xl font-bold text-center">Бекжан Скаков, CEO</h3>
       <div className="flex items-center">
-        <Mail className="mr-3 text-cyan-400" /> email@esep.kz
+        <Mail className="mr-3 text-cyan-400" /> bekzhan.s@esep.kz
       </div>
       <div className="flex items-center">
-        <Phone className="mr-3 text-cyan-400" /> +7 7XX XXX XX XX
+        <Phone className="mr-3 text-cyan-400" /> +7 701 796 66 56
       </div>
       <div className="flex items-center">
-        <MapPin className="mr-3 text-cyan-400" /> esep.kz
+        <MapPin className="mr-3 text-cyan-400" /> esep.ai
       </div>
     </div>
   </div>
@@ -411,144 +495,274 @@ export default function App() {
   const [currentSlide, setCurrentSlide] = useState(0);
 
   // Массив компонентов-слайдов
-  const Slide7_Demo_Dashboard = () => (
-    <div className="p-8 md:p-12 text-white h-full flex flex-col md:flex-row items-center justify-center gap-8">
-      <div className="md:w-1/2 text-center md:text-left">
-        <h2 className="text-3xl md:text-4xl font-bold text-cyan-300 mb-4">Демо 2: Главный Дашборд</h2>
-        <p className="text-lg text-gray-300 mb-4">Наглядная и понятная сводка по всем ресурсам. Пользователь сразу видит общую картину, прогноз расходов и свой индекс эффективности.</p>
-        <p className="text-gray-400">Скриншот берётся из папки images.</p>
-      </div>
-      <div className="md:w-1/2 flex justify-center">
-        <PhoneMockup imageUrl="/images/slide7.png" altText="Скриншот главного дашборда приложения ESEP" />
+  const Slide8_Demo_Combined = () => (
+    <div className="p-8 md:p-12 text-white h-full flex flex-col gap-6">
+              <h2 className="text-3xl md:text-4xl font-bold text-cyan-300 text-center">Главный Дашборд и Детальный Анализ</h2>
+      
+      <div className="flex-1 grid md:grid-cols-2 gap-8 items-center">
+        <div className="flex flex-col items-center">
+          <PhoneMockup imageUrl="/images/demo-dashboard.png" altText="Скриншот главного дашборда приложения ESEP" />
+          <div className="mt-3 text-sm text-gray-300">Главный дашборд</div>
+        </div>
+        <div className="flex flex-col items-center">
+          <PhoneMockup imageUrl="/images/demo-details.png" altText="Скриншот детального анализа приложения ESEP" />
+          <div className="mt-3 text-sm text-gray-300">Детальный анализ</div>
+        </div>
       </div>
     </div>
   );
 
-  const Slide8_Demo_Details = () => (
-    <div className="p-8 md:p-12 text-white h-full flex flex-col md:flex-row-reverse items-center justify-center gap-8">
-      <div className="md:w-1/2 text-center md:text-left">
-        <h2 className="text-3xl md:text-4xl font-bold text-cyan-300 mb-4">Демо 3: Детальный Анализ</h2>
-        <p className="text-lg text-gray-300 mb-4">Почасовые графики позволяют углубиться в детали и понять свои паттерны потребления. AI автоматически подсвечивает аномалии и важные моменты.</p>
-        <p className="text-gray-400">Скриншот возьмём из папки images.</p>
-      </div>
-      <div className="md:w-1/2 flex justify-center">
-        <PhoneMockup imageUrl="/images/slide8.png" altText="Скриншот экрана аналитики приложения ESEP" />
-      </div>
+  // Слайд с детальным анализом объединён с дашбордом в Slide8_Demo_Combined
+
+  // AI-Агент
+  const Slide9_Demo_AI_Agent = () => (
+    <div className="p-8 md:p-12 text-white h-full flex flex-col md:flex-row items-center justify-center gap-12">
+        <div className="md:w-1/2 flex justify-center">
+            <div className="relative mx-auto border-gray-600 bg-gray-800 border-[8px] rounded-[2.5rem] h-[550px] w-[280px] md:h-[600px] md:w-[320px] shadow-xl">
+                <div className="w-[100px] h-[18px] bg-gray-600 top-0 rounded-b-[1rem] left-1/2 -translate-x-1/2 absolute"></div>
+                <div className="h-[32px] w-[3px] bg-gray-600 absolute -left-[11px] top-[72px] rounded-l-lg"></div>
+                <div className="h-[32px] w-[3px] bg-gray-600 absolute -left-[11px] top-[124px] rounded-l-lg"></div>
+                <div className="h-[48px] w-[3px] bg-gray-600 absolute -right-[11px] top-[100px] rounded-r-lg"></div>
+                <div className="rounded-[2rem] overflow-hidden w-full h-full bg-gray-900 p-3 flex flex-col">
+                    <div className="flex-grow space-y-4 overflow-y-auto">
+                        {/* AI Greeting */}
+                        <div className="flex">
+                            <div className="bg-cyan-600 text-white p-3 rounded-lg max-w-xs">
+                                <p className="text-sm">Здравствуйте! Я ваш персональный AI-аналитик. Чем могу помочь?</p>
+                            </div>
+                        </div>
+                        {/* User Question 1 */}
+                        <div className="flex justify-end">
+                            <div className="bg-gray-700 text-white p-3 rounded-lg max-w-xs">
+                                <p className="text-sm">Почему в прошлом месяце счет за свет был таким большим?</p>
+                            </div>
+                        </div>
+                        {/* AI Answer 1 */}
+                        <div className="flex">
+                            <div className="bg-cyan-600 text-white p-3 rounded-lg max-w-xs">
+                                <p className="text-sm">Счет за свет высокий из-за постоянных перепадов базового потребления. Возможная причина - неисправность холодильника. Какая у вас модель холодильника?</p>
+                            </div>
+                        </div>
+                         {/* User Question 2 */}
+                        <div className="flex justify-end">
+                            <div className="bg-gray-700 text-white p-3 rounded-lg max-w-xs">
+                                <p className="text-sm">LG GR-B207JCS</p>
+                            </div>
+                        </div>
+                         {/* AI Answer 2 */}
+                         <div className="flex">
+                            <div className="bg-cyan-600 text-white p-3 rounded-lg max-w-xs">
+                                <p className="text-sm">Ваш холодильник LG 2007 года выпуска. Рекомендую заменить на современную модель класса A+++. Замена окупится за 2-3 года за счет экономии электроэнергии.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div className="mt-4 flex items-center">
+                        <input type="text" placeholder="Спросите что-нибудь..." className="w-full bg-gray-700 text-white rounded-full py-2 px-4 text-sm focus:outline-none" />
+                        <button className="ml-2 p-2 bg-cyan-500 rounded-full"><Send className="h-4 w-4 text-white" /></button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div className="md:w-1/2 text-center md:text-left">
+            <h2 className="text-3xl md:text-5xl font-bold text-cyan-300 mb-6">Ваш AI-Аналитик</h2>
+            <p className="text-lg md:text-xl text-gray-300 mb-8">Задайте любой вопрос. Получите мгновенный ответ.</p>
+            <ul className="space-y-4">
+                <li className="flex items-start"><MessageSquare className="h-8 w-8 text-cyan-400 mr-4 flex-shrink-0" /><p className="text-gray-300 md:text-lg"><b>Естественный язык:</b> Общайтесь с вашими данными так же просто, как с человеком.</p></li>
+                <li className="flex items-start"><Lightbulb className="h-8 w-8 text-cyan-400 mr-4 flex-shrink-0" /><p className="text-gray-300 md:text-lg"><b>Глубокий анализ:</b> AI-агент находит скрытые взаимосвязи между вашими привычками и расходами.</p></li>
+                <li className="flex items-start"><TrendingUp className="h-8 w-8 text-cyan-400 mr-4 flex-shrink-0" /><p className="text-gray-300 md:text-lg"><b>Проактивные советы:</b> Агент не только отвечает, но и сам предлагает идеи для экономии.</p></li>
+            </ul>
+        </div>
     </div>
   );
 
   // Демо 4: Умные рекомендации — удалён по запросу
 
-  const Slide10_Demo_Gamification = () => (
-    <div className="p-8 md:p-12 text-white h-full flex flex-col md:flex-row items-center justify-center gap-8">
-      <div className="md:w-1/2 text-center md:text-left">
-        <h2 className="text-3xl md:text-4xl font-bold text-cyan-300 mb-4">Демо 5: Вовлечение и Геймификация</h2>
-        <p className="text-lg text-gray-300 mb-4">Челленджи, рейтинги и достижения превращают экономию в увлекательный процесс. Пользователи соревнуются с соседями и получают награды за успехи.</p>
-        <p className="text-gray-400">Скриншот возьмём из папки images.</p>
-      </div>
-      <div className="md:w-1/2 flex justify-center">
-        <PhoneMockup imageUrl="/images/slide10.png" altText="Скриншот экрана геймификации приложения ESEP" />
-      </div>
-    </div>
-  );
+
 
   // Новый слайд: Анализ обычных счётчиков помесячно
-  const Slide_MonthlyBasic = () => {
-    const [showInsight, setShowInsight] = useState(false);
-    useEffect(() => {
-      const t = setTimeout(() => setShowInsight(true), 1500);
-      return () => clearTimeout(t);
+  const Slide5_MonthlyBasic = () => {
+    const [notifIds] = useState<number[]>([Date.now() + 11, Date.now() + 12, Date.now() + 13]);
+    const [notifs, setNotifs] = useState<Array<{ id: number; title: string; message: string }>>([]);
+
+    const playMsgSound = useCallback(() => {
+      try {
+        const AudioCtx = (window as any).AudioContext || (window as any).webkitAudioContext;
+        if (!AudioCtx) return;
+        const ctx = new AudioCtx();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.value = 950;
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        gain.gain.setValueAtTime(0.0001, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.09, ctx.currentTime + 0.01);
+        osc.start();
+        const stopAt = ctx.currentTime + 0.16;
+        osc.stop(stopAt);
+        gain.gain.exponentialRampToValueAtTime(0.0001, stopAt);
+        setTimeout(() => ctx.close(), 250);
+      } catch {}
     }, []);
+    useEffect(() => {
+      const schedule = [
+        { t: 900, title: 'AI‑рекомендация — Июль', message: 'Аномалия от кондиционера: очистите фильтры, поднимите setpoint на 1–2°C, используйте шторы/жалюзи днём. Режим Eco снизит потребление.', id: notifIds[0] },
+        { t: 2500, title: 'AI‑рекомендация — Декабрь', message: 'Праздничная подсветка и отопление: поставьте LED‑гирлянды с таймером, проверьте уплотнители окон, задайте бойлер 55–60°C.', id: notifIds[1] },
+        { t: 4200, title: 'AI‑рекомендация — Базовая нагрузка', message: 'Полностью отключайте ТВ/приставки и роутер‑USB ночью. Умные розетки помогут убрать 5–7 кВт⋅ч/мес фона.', id: notifIds[2] },
+      ];
+      const timers = schedule.map((s) => setTimeout(() => {
+        setNotifs((prev) => [...prev, { id: s.id, title: s.title, message: s.message }]);
+        playMsgSound();
+      }, s.t));
+      return () => timers.forEach(clearTimeout);
+    }, [notifIds, playMsgSound]);
+    const notifSlots = [0, 1, 2];
+    const chartEl = useMemo(() => (
+      <div className="mx-auto w-full max-w-3xl h-[260px] md:h-[320px]">
+        <ResponsiveContainer width="100%" height="100%">
+          <LineChart data={monthlyElectricityData} margin={{ top: 5, right: 20, left: 20, bottom: 5 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.2)" />
+            <XAxis dataKey="month" stroke="white" />
+            <YAxis stroke="white" label={{ value: 'кВт⋅ч', angle: -90, position: 'insideLeft', fill: '#e2e8f0' }} />
+            <Tooltip contentStyle={{ backgroundColor: '#1a202c', border: '1px solid #4a5568' }} />
+            <Legend />
+            <ReferenceArea x1="Июл" x2="Июл" fill="#ef4444" fillOpacity={0.12} stroke="#ef4444" strokeOpacity={0.6} />
+            <ReferenceArea x1="Дек" x2="Дек" fill="#ef4444" fillOpacity={0.12} stroke="#ef4444" strokeOpacity={0.6} />
+            <Line type="monotone" dataKey="peers" name="Схожие потребители" stroke="#22d3ee" strokeWidth={2} strokeDasharray="4 4" dot={false} />
+            <Line type="monotone" dataKey="you" name="Вы" stroke="#facc15" strokeWidth={3} dot={false} />
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
+    ), []);
     return (
-      <div className="p-6 md:p-10 text-white h-full flex flex-col">
-        <h2 className="text-3xl md:text-4xl font-bold text-cyan-300 mb-4 text-center">Продукт в действии: Обычные счётчики (помесячно)</h2>
+      <div className="p-6 md:p-10 text-white h-full flex flex-col relative">
+        <h2 className="text-3xl md:text-4xl font-bold text-cyan-300 mb-4 text-center flex items-center justify-center gap-2">
+          <Zap className="h-7 w-7 text-yellow-300" />
+          Продукт в действии: Обычные счётчики (помесячно)
+        </h2>
         <p className="text-center text-gray-300 mb-4">Даже без почасовых данных видны сезонность и аномалии. Мы помогаем выявлять пики и давать простые рекомендации.</p>
-        <div className="flex-1 w-full bg-white/10 rounded-lg p-4 relative">
-          <div className="pointer-events-none w-full h-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={monthlyElectricityData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.2)" />
-                <XAxis dataKey="month" stroke="white" />
-                <YAxis stroke="white" />
-                {/* Без Tooltip/Legend; подсветка отключена */}
-                <ReferenceArea x1="Дек" x2="Дек" fill="red" fillOpacity={0.1} stroke="red" strokeOpacity={0.5} />
-                <ReferenceArea x1="Янв" x2="Янв" fill="red" fillOpacity={0.1} stroke="red" strokeOpacity={0.5} />
-                <Bar dataKey="kwh" name="Электроэнергия (кВт⋅ч)" fill="#22d3ee" isAnimationActive={false}>
-                  {monthlyElectricityData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.kwh > 300 ? '#f59e0b' : '#22d3ee'} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-          {showInsight && (
-            <div className="absolute top-1/4 left-2/3 transform -translate-x-1/3 -translate-y-1/4 bg-red-800/90 text-white p-4 rounded-lg shadow-2xl max-w-sm animate-fade-in border-2 border-red-400 z-10">
-              <h4 className="font-bold mb-1">Сезонный пик</h4>
-              <p className="text-sm">Декабрь–январь выше нормы. Советы: утепление, настройки отопления, оптимизация бойлера.</p>
-            </div>
-          )}
+
+        {/* Пуш‑уведомления под заголовком */}
+        <div className="mt-2 grid gap-4 md:grid-cols-3 grid-cols-1 max-w-5xl mx-auto w-full">
+          {notifSlots.map((i) => {
+            const n = notifs[i];
+            return (
+              <div key={i} className={`rounded-lg shadow-xl border p-4 h-[160px] ${n ? 'animate-fade-in bg-white/10 backdrop-blur border-cyan-400/40' : 'invisible bg-transparent border-transparent'}`}>
+                <div className="flex items-start gap-3 h-full">
+                  <Lightbulb className={`h-6 w-6 flex-shrink-0 mt-0.5 ${n ? 'text-yellow-300' : 'text-transparent'}`} />
+                  <div className="flex flex-col h-full w-full">
+                    <div className="font-semibold mb-1">{n?.title ?? ''}</div>
+                    <div className="text-sm text-gray-300 leading-snug">{n?.message ?? ''}</div>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
         </div>
-        <div className="mt-4 grid md:grid-cols-3 gap-4">
-          <div className="bg-white/10 p-4 rounded-lg">
-            <h4 className="font-semibold mb-1 flex items-center gap-2"><TrendingUp className="text-cyan-300" />Сезонные пики</h4>
-            <p className="text-sm text-gray-300">Зима (дек–янв) — повышенное потребление. Рекомендация: утепление окон/дверей, проверка режимов отопления.</p>
-          </div>
-          <div className="bg-white/10 p-4 rounded-lg">
-            <h4 className="font-semibold mb-1 flex items-center gap-2"><Lightbulb className="text-yellow-300" />Быстрые победы</h4>
-            <p className="text-sm text-gray-300">LED‑лампы, отключение из розетки неиспользуемых приборов — до 10% экономии.</p>
-          </div>
-          <div className="bg-white/10 p-4 rounded-lg">
-            <h4 className="font-semibold mb-1 flex items-center gap-2"><CheckCircle className="text-cyan-400" />Аномалии</h4>
-            <p className="text-sm text-gray-300">Внезапный рост в межсезонье — проверяем настройки бойлера/кондиционера.</p>
-          </div>
+
+        {/* Заполнитель, чтобы график был у нижнего края */}
+        <div className="flex-1" />
+
+        {/* График внизу */}
+        <div className="w-full p-0 relative">
+          {chartEl}
+          {/* Подсветка аномалий оставлена, текстовый оверлей убран: рекомендации приходят пушами */}
         </div>
       </div>
     );
   };
 
   // Новый слайд: Анализ отдельного ресурса (вода)
-  const Slide_WaterInsights = () => {
-    const [showInsight, setShowInsight] = useState(false);
-    useEffect(() => {
-      const t = setTimeout(() => setShowInsight(true), 1500);
-      return () => clearTimeout(t);
+  const Slide6_WaterInsights = () => {
+    const [notifIds] = useState<number[]>([Date.now() + 21, Date.now() + 22, Date.now() + 23]);
+    const [notifs, setNotifs] = useState<Array<{ id: number; title: string; message: string }>>([]);
+
+    const playMsgSound = useCallback(() => {
+      try {
+        const AudioCtx = (window as any).AudioContext || (window as any).webkitAudioContext;
+        if (!AudioCtx) return;
+        const ctx = new AudioCtx();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.value = 900;
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        gain.gain.setValueAtTime(0.0001, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.09, ctx.currentTime + 0.01);
+        osc.start();
+        const stopAt = ctx.currentTime + 0.16;
+        osc.stop(stopAt);
+        gain.gain.exponentialRampToValueAtTime(0.0001, stopAt);
+        setTimeout(() => ctx.close(), 250);
+      } catch {}
     }, []);
+
+    useEffect(() => {
+      const schedule = [
+        { t: 900, title: 'AI‑рекомендация — Ночь', message: 'Ровное потребление 02:00–03:00 — признак утечки. Проверьте бачок унитаза и смесители, замените арматуру при необходимости.', id: notifIds[0] },
+        { t: 2500, title: 'AI‑рекомендация — Утро', message: 'Пик 07:00 выше «схожих». Аэраторы и экономичная лейка душа снижают расход до 20%.', id: notifIds[1] },
+        { t: 4200, title: 'AI‑рекомендация — Вечер', message: 'В 19:00 совмещены стирка/мытьё посуды. Разнесите нагрузки, используйте эко‑режимы.', id: notifIds[2] },
+      ];
+      const timers = schedule.map((s) => setTimeout(() => {
+        setNotifs((prev) => [...prev, { id: s.id, title: s.title, message: s.message }]);
+        playMsgSound();
+      }, s.t));
+      return () => timers.forEach(clearTimeout);
+    }, [notifIds, playMsgSound]);
+
+    const notifSlots = [0, 1, 2];
+    const chartEl = useMemo(() => (
+      <div className="mx-auto w-full max-w-3xl h-[260px] md:h-[320px]">
+        <ResponsiveContainer width="100%" height="100%">
+          <LineChart data={waterHourlyData} margin={{ top: 5, right: 20, left: 20, bottom: 5 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.2)" />
+            <XAxis dataKey="hour" stroke="white" />
+            <YAxis stroke="white" label={{ value: 'л/час', angle: -90, position: 'insideLeft', fill: '#e2e8f0' }} />
+            <Tooltip contentStyle={{ backgroundColor: '#1a202c', border: '1px solid #4a5568' }} />
+            <Legend />
+            <ReferenceArea x1="02:00" x2="03:00" fill="#ef4444" fillOpacity={0.12} stroke="#ef4444" strokeOpacity={0.6} />
+            <ReferenceArea x1="07:00" x2="07:00" fill="#ef4444" fillOpacity={0.12} stroke="#ef4444" strokeOpacity={0.6} />
+            <ReferenceArea x1="19:00" x2="19:00" fill="#ef4444" fillOpacity={0.12} stroke="#ef4444" strokeOpacity={0.6} />
+            <Line type="monotone" dataKey="peers" name="Схожие потребители" stroke="#22d3ee" strokeWidth={2} strokeDasharray="4 4" dot={false} />
+            <Line type="monotone" dataKey="you" name="Вы" stroke="#4fd1c5" strokeWidth={3} dot={false} />
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
+    ), []);
+
     return (
-      <div className="p-6 md:p-10 text-white h-full flex flex-col">
-        <h2 className="text-3xl md:text-4xl font-bold text-cyan-300 mb-4 text-center">Анализ ресурса: Вода</h2>
-        <p className="text-center text-gray-300 mb-4">Выявляем утечки, неэффективные привычки и даём прикладные рекомендации.</p>
-        <div className="flex-1 w-full bg-white/10 rounded-lg p-4 relative">
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={waterWeeklyData} margin={{ top: 5, right: 20, left: 20, bottom: 5 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.2)" />
-              <XAxis dataKey="day" stroke="white" />
-              <YAxis stroke="white" />
-              <Tooltip contentStyle={{ backgroundColor: '#1a202c', border: '1px solid #4a5568' }} />
-              <Legend />
-              <ReferenceArea x1="Чт" x2="Сб" fill="red" fillOpacity={0.06} stroke="red" strokeOpacity={0.4} />
-              <Line type="monotone" dataKey="liters" name="Литры/день" stroke="#4fd1c5" strokeWidth={2} dot={false} />
-            </LineChart>
-          </ResponsiveContainer>
-          {showInsight && (
-            <div className="absolute top-1/4 left-1/3 transform -translate-x-1/3 -translate-y-1/4 bg-red-800/90 text-white p-4 rounded-lg shadow-2xl max-w-sm animate-fade-in border-2 border-red-400 z-10">
-              <h4 className="font-bold mb-1">Пик расхода воды</h4>
-              <p className="text-sm">Чт–Сб: повышенная нагрузка (уборка/души). Советы: аэраторы на смесителях, экономичные насадки для душа, контроль длительности.</p>
-            </div>
-          )}
+      <div className="p-6 md:p-10 text-white h-full flex flex-col relative">
+        <h2 className="text-3xl md:text-4xl font-bold text-cyan-300 mb-4 text-center flex items-center justify-center gap-2">
+          <Droplet className="h-7 w-7 text-cyan-300" />
+          Анализ ресурса: Вода (почасово)
+        </h2>
+        <p className="text-center text-gray-300 mb-4">Сравнение со схожими домохозяйствами, подсветка аномалий и практичные рекомендации.</p>
+
+        {/* Пуш‑уведомления под заголовком */}
+        <div className="mt-2 grid gap-4 md:grid-cols-3 grid-cols-1 max-w-5xl mx-auto w-full">
+          {notifSlots.map((i) => {
+            const n = notifs[i];
+            return (
+              <div key={i} className={`rounded-lg shadow-xl border p-4 h-[160px] ${n ? 'animate-fade-in bg-white/10 backdrop-blur border-cyan-400/40' : 'invisible bg-transparent border-transparent'}`}>
+                <div className="flex items-start gap-3 h-full">
+                  <Lightbulb className={`h-6 w-6 flex-shrink-0 mt-0.5 ${n ? 'text-yellow-300' : 'text-transparent'}`} />
+                  <div className="flex flex-col h-full w-full">
+                    <div className="font-semibold mb-1">{n?.title ?? ''}</div>
+                    <div className="text-sm text-gray-300 leading-snug">{n?.message ?? ''}</div>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
         </div>
-        <div className="mt-4 grid md:grid-cols-3 gap-4">
-          <div className="bg-white/10 p-4 rounded-lg">
-            <h4 className="font-semibold mb-1 flex items-center gap-2"><Droplet className="text-cyan-300" />Утечки</h4>
-            <p className="text-sm text-gray-300">Ночной стабильно ровный расход — признак подтекания бачка/крана. Рекомендация: замена арматуры.</p>
-          </div>
-          <div className="bg-white/10 p-4 rounded-lg">
-            <h4 className="font-semibold mb-1 flex items-center gap-2"><Flame className="text-orange-300" />Горячая вода</h4>
-            <p className="text-sm text-gray-300">Снижение температуры бойлера с 80° до 60° — экономия воды и газа/электричества.</p>
-          </div>
-          <div className="bg-white/10 p-4 rounded-lg">
-            <h4 className="font-semibold mb-1 flex items-center gap-2"><Lightbulb className="text-yellow-300" />Привычки</h4>
-            <p className="text-sm text-gray-300">Душ вместо ванны, аэраторы на кранах — до 20% экономии.</p>
-          </div>
+
+        {/* Заполнитель, чтобы график был у нижнего края */}
+        <div className="flex-1" />
+
+        {/* График внизу без фона */}
+        <div className="w-full p-0 relative">
+          {chartEl}
         </div>
       </div>
     );
@@ -556,24 +770,33 @@ export default function App() {
 
   // Слайд "Казахстан в глобальном контексте" — удалён по запросу
 
-  const Slide12_Traction_Updated = () => (
+  const Slide11_Traction_Updated = () => (
     <div className="p-8 md:p-12 text-white text-center h-full flex flex-col justify-center">
       <h2 className="text-3xl md:text-4xl font-bold text-cyan-300 mb-12">Наши Первые Достижения</h2>
       <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8 max-w-5xl mx-auto">
         <div className="bg-white/10 p-6 rounded-lg flex flex-col items-center">
           <UserPlus className="h-12 w-12 text-cyan-400 mb-4" />
-          <p className="text-4xl font-bold">2,000+</p>
+          <p className="text-4xl font-bold">2,500+</p>
           <p className="text-gray-300 mt-2">Пользователей за первый месяц</p>
         </div>
         <div className="bg-white/10 p-6 rounded-lg flex flex-col items-center">
           <Briefcase className="h-12 w-12 text-cyan-400 mb-4" />
           <p className="text-2xl font-bold">Успешный пилот</p>
-          <p className="text-gray-300 mt-2">с лидером рынка BI Group</p>
+          <div className="mt-3">
+            <img src="/images/bi_logo.png" alt="BI Group Logo" className="h-12 w-auto object-contain" />
+          </div>
         </div>
         <div className="bg-white/10 p-6 rounded-lg flex flex-col items-center">
           <CheckCircle className="h-12 w-12 text-cyan-400 mb-4" />
           <p className="text-2xl font-bold">Интеграции</p>
-          <p className="text-gray-300 mt-2">с Астана Су Арнасы и Көкшетау Су Арнасы</p>
+          <div className="mt-3 space-y-2">
+            <div className="bg-cyan-500/20 p-3 rounded-lg border border-cyan-400/40">
+              <p className="text-sm font-semibold text-cyan-200">Астана Су Арнасы</p>
+            </div>
+            <div className="bg-cyan-500/20 p-3 rounded-lg border border-cyan-400/40">
+              <p className="text-sm font-semibold text-cyan-200">Көкшетау Су Арнасы</p>
+            </div>
+          </div>
         </div>
         <div className="bg-white/10 p-6 rounded-lg flex flex-col items-center">
           <TrendingUp className="h-12 w-12 text-cyan-400 mb-4" />
@@ -584,35 +807,11 @@ export default function App() {
     </div>
   );
 
-  const Slide13_PartnershipModel_New = Slide7_PartnershipModel;
+  
 
-  const Slide14_Team_New = () => (
-    <div className="p-8 md:p-12 text-white">
-      <h2 className="text-3xl md:text-4xl font-bold text-cyan-300 mb-8 text-center">Наша Команда</h2>
-      <div className="grid md:grid-cols-3 gap-8 text-center">
-        <div className="bg-white/10 p-6 rounded-lg">
-          <img src="/images/team-ceo.png" alt="CEO" className="rounded-full mx-auto mb-4 border-4 border-cyan-400" />
-          <h3 className="text-xl font-semibold">[Имя Фамилия]</h3>
-          <p className="text-cyan-400">CEO</p>
-          <p className="text-sm text-gray-300 mt-2">Опыт в управлении IT-проектами в Казахстане.</p>
-        </div>
-        <div className="bg-white/10 p-6 rounded-lg">
-          <img src="/images/team-cto.png" alt="CTO" className="rounded-full mx-auto mb-4 border-4 border-cyan-400" />
-          <h3 className="text-xl font-semibold">[Имя Фамилия]</h3>
-          <p className="text-cyan-400">CTO</p>
-          <p className="text-sm text-gray-300 mt-2">Ведущий специалист по AI и анализу больших данных.</p>
-        </div>
-        <div className="bg-white/10 p-6 rounded-lg">
-          <img src="/images/team-gr.png" alt="GR Director" className="rounded-full mx-auto mb-4 border-4 border-cyan-400" />
-          <h3 className="text-xl font-semibold">[Имя Фамилия]</h3>
-          <p className="text-cyan-400">GR-директор</p>
-          <p className="text-sm text-gray-300 mt-2">Опыт взаимодействия с государственными органами.</p>
-        </div>
-      </div>
-    </div>
-  );
 
-  const Slide15_TheAsk_New = () => (
+
+  const Slide14_TheAsk = () => (
     <div className="p-8 md:p-12 text-white">
       <h2 className="text-3xl md:text-4xl font-bold text-cyan-300 mb-8 text-center">Наше Предложение: Партнерство</h2>
       <p className="text-lg mb-6 text-center">Мы не просим финансирования. Мы просим поддержки для масштабирования доказавшего свою эффективность решения на всю страну.</p>
@@ -648,18 +847,16 @@ export default function App() {
       <Slide2_StatePriorities />,
       <Slide3_Comparison_Qualitative />,
       <Slide4_HowItHelps />,
-      <Slide_MonthlyBasic />,
-      <Slide_WaterInsights />,
-      <Slide5_LiveDemo_CrossAnalysis />,
-      <Slide7_Demo_Dashboard />,
-      <Slide8_Demo_Details />,
-      <Slide10_Demo_Gamification />,
-      <Slide12_Traction_Updated />,
-      <Slide13_PartnershipModel_New />,
-      <Slide14_Team_New />,
-      <Slide15_TheAsk_New />,
-      <Slide10_Roadmap />,
-      <Slide11_Contacts />,
+      <Slide5_MonthlyBasic />,
+      <Slide6_WaterInsights />,
+      <Slide7_LiveDemo_CrossAnalysis />,
+      <Slide8_Demo_Combined />,
+      <Slide9_Demo_AI_Agent />,
+      <Slide11_Traction_Updated />,
+      <Slide12_PartnershipModel />,
+      <Slide14_TheAsk />,
+      <Slide15_Roadmap />,
+      <Slide16_Contacts />,
     ],
     [],
   );
@@ -801,6 +998,7 @@ export default function App() {
                 .animate-fade-in {
                     animation: fade-in 0.5s ease-out forwards;
                 }
+                
             `}</style>
 
       <div className="w-full h-full bg-gray-900/50 flex flex-col relative overflow-hidden" onClick={handleRootClick}>
